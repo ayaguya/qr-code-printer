@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-ONE 31553対応 QRコード印刷システム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #4a5568;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(350px);
+            transition: transform 0.3s ease;
+        }
+
+        @media print {
+            .notification {
+                display: none !important;
+            }
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success { background: #48bb78; }
+        .notification.error { background: #e53e3e; }
+        .notification.warning { background: #ed8936; }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            margin-top: 20px;
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .preview-cell {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 8px;
+            text-align: center;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-qr {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 4px;
+        }
+
+        .preview-id {
+            font-size: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .preview-name {
+            font-size: 8px;
+            color: #666;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4fd1c7 0%, #38b2ac 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .range-inputs {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .range-input {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .spec-info {
+            background: #e6fffa;
+            border: 2px solid #81e6d9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .spec-title {
+            font-weight: bold;
+            color: #2c7a7b;
+            margin-bottom: 10px;
+        }
+
+        .spec-details {
+            font-size: 0.9em;
+            color: #2c7a7b;
+        }
+
+        /* 印刷専用スタイル */
+        @media print {
+            body, html {
+                margin: 0;
+                padding: 0;
+                background: white;
+                color: black;
+            }
+
+            .container {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            .print-page {
+                page-break-after: always;
+                width: 210mm;
+                height: 297mm;
+                padding: 10.5mm 8.5mm;
+                box-sizing: border-box;
+                position: relative;
+            }
+
+            .print-page:last-child {
+                page-break-after: auto;
+            }
+
+            .print-grid {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                grid-template-rows: repeat(8, 1fr);
+                gap: 0;
+                width: 193mm;
+                height: 276mm;
+                margin: 0;
+                padding: 0;
+            }
+
+            .print-cell {
+                width: 38.6mm;
+                height: 34.5mm;
+                padding: 2.25mm;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                border: 1px solid transparent;
+            }
+
+            .print-qr {
+                width: 28mm;
+                height: 28mm;
+                margin-bottom: 1mm;
+            }
+
+            .print-id {
+                font-size: 8pt;
+                font-weight: bold;
+                color: black;
+                line-height: 1.1;
+            }
+
+            .print-name {
+                font-size: 6pt;
+                color: #666;
+                line-height: 1;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        .print-controls {
+            background: #f0f9ff;
+            border: 2px solid #7dd3fc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .print-preview {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .print-page-preview {
+            width: 210mm;
+            height: 297mm;
+            border: 1px solid #ccc;
+            margin: 10px auto;
+            padding: 14mm 22mm;
+            box-sizing: border-box;
+            transform: scale(0.3);
+            transform-origin: top center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header no-print">
+            <h1>🏷️ A-ONE 31553対応 QRコード印刷システム</h1>
+            <p>佐良浜盆踊り専用 | 40面ラベル対応 | 角丸正方形</p>
+        </div>
+
+        <!-- 商品仕様 -->
+        <div class="section no-print">
+            <div class="section-title">📋 A-ONE 31553 商品仕様</div>
+            <div class="spec-info">
+                <div class="spec-title">🏷️ ラベル仕様</div>
+                <div class="spec-details">
+                    <strong>品番:</strong> 31553<br>
+                    <strong>面数:</strong> 40面（5列×8段）<br>
+                    <strong>ラベルサイズ:</strong> 30mm × 30mm（角丸正方形）<br>
+                    <strong>余白:</strong> 上下14mm、左右22mm<br>
+                    <strong>印刷範囲:</strong> 166mm × 269mm<br>
+                    <strong>用紙:</strong> A4判マット紙・ホワイト<br>
+                    <strong>対応プリンタ:</strong> インクジェット・レーザー・コピー機<br>
+                    <strong>入数:</strong> 20シート（800片）<br>
+                    <strong>特徴:</strong> QRコード印刷に最適、四辺余白付、角丸加工
+                </div>
+            </div>
+        </div>
+
+        <!-- 統計情報 -->
+        <div class="section no-print">
+            <div class="section-title">📊 生成統計</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalQRs">0</div>
+                    <div class="stat-label">生成QRコード数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSheets">0</div>
+                    <div class="stat-label">印刷シート数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="remainingLabels">800</div>
+                    <div class="stat-label">残りラベル数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="estimatedCost">¥0</div>
+                    <div class="stat-label">推定コスト</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QRコード生成設定 -->
+        <div class="section no-print">
+            <div class="section-title">⚙️ QRコード生成設定</div>
+            
+            <div class="range-inputs">
+                <div class="range-input">
+                    <label class="form-label">開始番号</label>
+                    <input type="number" class="form-input" id="startNumber" value="1" min="1">
+                </div>
+                <div class="range-input">
+                    <label class="form-label">終了番号</label>
+                    <input type="number" class="form-input" id="endNumber" value="10" min="1">
+                </div>
+                <div class="range-input">
+                    <label class="form-label">IDプレフィックス</label>
+                    <input type="text" class="form-input" id="idPrefix" value="AYAGU_">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">QRコードサイズ</label>
+                <select class="form-select" id="qrSize">
+                    <option value="22">22mm × 22mm（標準）</option>
+                    <option value="25">25mm × 25mm（大）</option>
+                    <option value="28">28mm × 28mm（最大）</option>
+                    <option value="20">20mm × 20mm（小）</option>
+                </select>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-primary" onclick="generateQRCodes()">🎯 QRコード生成</button>
+                <button class="btn btn-success" onclick="testQRCodes()">📱 スマホ読み取りテスト</button>
+                <button class="btn btn-warning" onclick="clearAll()">🗑️ クリア</button>
+            </div>
+        </div>
+
+        <!-- 印刷コントロール -->
+        <div class="section no-print" id="printControls" style="display: none;">
+            <div class="section-title">🖨️ 印刷設定</div>
+            <div class="print-controls">
+                <div style="margin-bottom: 15px;">
+                    <strong>📋 印刷前の確認事項:</strong><br>
+                    ✅ A-ONE 31553ラベル用紙をプリンタにセット<br>
+                    ✅ プリンタ設定: A4サイズ、拡大/縮小なし（100%）<br>
+                    ✅ 余白設定: 上下14mm、左右22mm（自動余白を無効にする）<br>
+                    ✅ 印刷品質: 高品質モード推奨<br>
+                    ⚠️ 印刷前に必ずプレビューで位置を確認してください<br>
+                    📏 印刷可能範囲: 166mm × 269mm（5列×8段配置）
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-print" onclick="printQRCodes()">🖨️ 印刷実行</button>
+                    <button class="btn btn-primary" onclick="showPrintPreview()">👀 印刷プレビュー</button>
+                    <button class="btn btn-success" onclick="downloadPDF()">📄 PDF保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 印刷プレビュー -->
+        <div class="section no-print" id="printPreviewSection" style="display: none;">
+            <div class="section-title">👀 印刷プレビュー</div>
+            <div class="print-preview" id="printPreview"></div>
+        </div>
+
+        <!-- テスト用大きなQRコード表示エリア -->
+        <div class="section no-print" id="testSection" style="display: none;">
+            <div class="section-title">📱 スマホ読み取りテスト</div>
+            <div style="text-align: center; padding: 20px;">
+                <div id="testQRDisplay"></div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="prevTestQR()">← 前</button>
+                    <span id="testQRCounter" style="margin: 0 20px; font-weight: bold;">1 / 10</span>
+                    <button class="btn btn-primary" onclick="nextTestQR()">次 →</button>
+                </div>
+                <div style="margin-top: 15px; color: #666;">
+                    <p><strong>使い方:</strong> スマホのカメラでQRコードをスキャンして、正しく読み取れるかテストしてください</p>
+                    <p><strong>期待結果:</strong> 「AYAGU_001」「AYAGU_002」などが読み取れればOK</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- プレビュー -->
+        <div class="section no-print">
+            <div class="section-title">👀 プレビュー（A-ONE 31553レイアウト）</div>
+            <div class="preview-grid" id="previewGrid">
+                <div style="grid-column: 1/-1; text-align: center; color: #718096; padding: 20px;">
+                    QRコードを生成すると、A-ONE 31553のレイアウトでプレビューが表示されます<br>
+                    <small>実際の印刷サイズ: 30mm × 30mm（角丸正方形）| 5列×8段配置</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 印刷用データ（非表示） -->
+        <div class="print-only" id="printData"></div>
+    </div>
+
+    <!-- 通知 -->
+    <div class="notification" id="notification"></div>
+
+    <!-- QRコード生成ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+    <script>
+        // グローバル変数
+        let qrCodes = [];
+        let currentTestIndex = 0;
+
+        // 統計更新
+        function updateStats() {
+            const start = parseInt(document.getElementById('startNumber').value) || 0;
+            const end = parseInt(document.getElementById('endNumber').value) || 0;
+            const total = Math.max(0, end - start + 1);
+            
+            document.getElementById('totalQRs').textContent = total;
+            document.getElementById('totalSheets').textContent = Math.ceil(total / 40);
+            document.getElementById('remainingLabels').textContent = Math.max(0, 800 - total);
+            document.getElementById('estimatedCost').textContent = `¥${Math.ceil(total / 40) * 62}`;
+        }
+
+        // 通知表示
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // QRコード生成（API使用）
+        async function generateQRCodes() {
+            const start = parseInt(document.getElementById('startNumber').value);
+            const end = parseInt(document.getElementById('endNumber').value);
+            const prefix = document.getElementById('idPrefix').value;
+            const qrSize = parseInt(document.getElementById('qrSize').value);
+
+            if (start > end) {
+                showNotification('開始番号は終了番号より小さくしてください', 'error');
+                return;
+            }
+
+            if (end - start + 1 > 800) {
+                showNotification('A-ONE 31553は800片まで対応しています', 'error');
+                return;
+            }
+
+            try {
+                showNotification('QRコード生成中...', 'warning');
+                
+                qrCodes = [];
+                const total = end - start + 1;
+                
+                for (let i = start; i <= end; i++) {
+                    const id = `${prefix}${String(i).padStart(3, '0')}`;
+                    const name = `参加者${String(i).padStart(3, '0')}`;
+                    
+                    // QR Server API を使用（確実に動作）
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(id)}`;
+                    
+                    qrCodes.push({
+                        id: id,
+                        name: name,
+                        dataURL: qrUrl,
+                        size: qrSize
+                    });
+
+                    // 進行状況表示
+                    if (i % 5 === 0 || i === end) {
+                        showNotification(`生成中... ${i - start + 1}/${total}`, 'warning');
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                }
+
+                updatePreview();
+                updateStats();
+                showNotification(`${total}個のQRコード（${qrSize}mm）を生成しました！`, 'success');
+
+                // 印刷コントロールを表示
+                document.getElementById('printControls').style.display = 'block';
+
+            } catch (error) {
+                console.error('QRコード生成エラー:', error);
+                showNotification('QRコード生成に失敗しました', 'error');
+            }
+        }
+
+        // プレビュー更新
+        function updatePreview() {
+            const previewGrid = document.getElementById('previewGrid');
+            previewGrid.innerHTML = '';
+
+            // 40面のグリッドを作成
+            for (let i = 0; i < 40; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'preview-cell';
+                
+                if (i < qrCodes.length) {
+                    const qr = qrCodes[i];
+                    cell.innerHTML = `
+                        <img src="${qr.dataURL}" class="preview-qr" alt="QR Code">
+                        <div class="preview-id">${qr.id}</div>
+                        <div class="preview-name">${qr.name}</div>
+                    `;
+                } else {
+                    cell.innerHTML = `
+                        <div style="width: 40px; height: 40px; background: #f0f0f0; border: 1px dashed #ccc; margin-bottom: 4px;"></div>
+                        <div class="preview-id">---</div>
+                    `;
+                }
+                
+                previewGrid.appendChild(cell);
+            }
+        }
+
+        // 印刷プレビュー表示
+        function showPrintPreview() {
+            if (qrCodes.length === 0) {
+                showNotification('印刷するQRコードがありません', 'error');
+                return;
+            }
+
+            const printPreview = document.getElementById('printPreview');
+            const totalSheets = Math.ceil(qrCodes.length / 40);
+            const selectedSize = qrCodes.length > 0 ? qrCodes[0].size : 28;
+            
+            printPreview.innerHTML = '';
+
+            for (let sheet = 0; sheet < totalSheets; sheet++) {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'print-page-preview';
+                
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'print-grid';
+                gridDiv.style.display = 'grid';
+                gridDiv.style.gridTemplateColumns = 'repeat(5, 1fr)';
+                gridDiv.style.gridTemplateRows = 'repeat(8, 1fr)';
+                gridDiv.style.gap = '0';
+                gridDiv.style.width = '166mm';
+                gridDiv.style.height = '269mm';
+
+                // 40セルを作成
+                for (let i = 0; i < 40; i++) {
+                    const qrIndex = sheet * 40 + i;
+                    const cellDiv = document.createElement('div');
+                    cellDiv.style.display = 'flex';
+                    cellDiv.style.flexDirection = 'column';
+                    cellDiv.style.alignItems = 'center';
+                    cellDiv.style.justifyContent = 'center';
+                    cellDiv.style.textAlign = 'center';
+                    cellDiv.style.border = '1px solid #ddd';
+                    cellDiv.style.padding = '2px';
+
+                    if (qrIndex < qrCodes.length) {
+                        const qr = qrCodes[qrIndex];
+                        const previewSize = Math.round(selectedSize * 0.9); // プレビューでは少し小さく表示
+                        cellDiv.innerHTML = `
+                            <img src="${qr.dataURL}" style="width: ${previewSize}mm; height: ${previewSize}mm; margin-bottom: 1px;" alt="QR Code">
+                            <div style="font-size: 6pt; font-weight: bold;">${qr.id}</div>
+                            <div style="font-size: 5pt; color: #666;">${qr.name}</div>
+                        `;
+                    }
+                    
+                    gridDiv.appendChild(cellDiv);
+                }
+                
+                pageDiv.appendChild(gridDiv);
+                printPreview.appendChild(pageDiv);
+            }
+
+            document.getElementById('printPreviewSection').style.display = 'block';
+            document.getElementById('printPreviewSection').scrollIntoView({ behavior: 'smooth' });
+            showNotification(`印刷プレビューを表示（QRサイズ: ${selectedSize}mm）`, 'success');
+        }
+
+        // 印刷用データ準備
+        function preparePrintData() {
+            const printData = document.getElementById('printData');
+            const totalSheets = Math.ceil(qrCodes.length / 40);
+            const selectedSize = qrCodes.length > 0 ? qrCodes[0].size : 28;
+            
+            printData.innerHTML = '';
+
+            for (let sheet = 0; sheet < totalSheets; sheet++) {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'print-page';
+                
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'print-grid';
+
+                // 40セルを作成
+                for (let i = 0; i < 40; i++) {
+                    const qrIndex = sheet * 40 + i;
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'print-cell';
+
+                    if (qrIndex < qrCodes.length) {
+                        const qr = qrCodes[qrIndex];
+                        cellDiv.innerHTML = `
+                            <img src="${qr.dataURL}" class="print-qr" style="width: ${selectedSize}mm; height: ${selectedSize}mm;" alt="QR Code">
+                            <div class="print-id">${qr.id}</div>
+                            <div class="print-name">${qr.name}</div>
+                        `;
+                    }
+                    
+                    gridDiv.appendChild(cellDiv);
+                }
+                
+                pageDiv.appendChild(gridDiv);
+                printData.appendChild(pageDiv);
+            }
+        }
+
+        // 印刷実行
+        function printQRCodes() {
+            if (qrCodes.length === 0) {
+                showNotification('印刷するQRコードがありません', 'error');
+                return;
+            }
+
+            // 通知を非表示にする
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+
+            preparePrintData();
+            
+            // 少し待ってから印刷実行（画像の読み込み待ち + 通知非表示確実化）
+            setTimeout(() => {
+                window.print();
+                // 印刷後に通知を表示
+                setTimeout(() => {
+                    showNotification('印刷を実行しました', 'success');
+                }, 1000);
+            }, 200);
+        }
+
+        // PDF保存（印刷→PDF保存を案内）
+        function downloadPDF() {
+            if (qrCodes.length === 0) {
+                showNotification('保存するQRコードがありません', 'error');
+                return;
+            }
+
+            // 通知を非表示にする
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+
+            preparePrintData();
+            
+            setTimeout(() => {
+                window.print();
+                // 印刷後に案内を表示
+                setTimeout(() => {
+                    showNotification('PDF保存: 印刷ダイアログで「PDFに保存」を選択してください', 'warning');
+                }, 1000);
+            }, 200);
+        }
+
+        // スマホ読み取りテスト
+        function testQRCodes() {
+            if (qrCodes.length === 0) {
+                showNotification('テスト用のQRコードがありません', 'error');
+                return;
+            }
+
+            currentTestIndex = 0;
+            document.getElementById('testSection').style.display = 'block';
+            displayTestQR();
+            
+            // テストセクションまでスクロール
+            document.getElementById('testSection').scrollIntoView({ behavior: 'smooth' });
+            
+            showNotification('スマホでQRコードを読み取りテストしてください', 'success');
+        }
+
+        // テスト用QRコード表示
+        function displayTestQR() {
+            const testDisplay = document.getElementById('testQRDisplay');
+            const counter = document.getElementById('testQRCounter');
+            
+            if (currentTestIndex < qrCodes.length) {
+                const qr = qrCodes[currentTestIndex];
+                
+                testDisplay.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <img src="${qr.dataURL}" style="width: 200px; height: 200px; display: block;" alt="Test QR Code">
+                        <div style="margin-top: 15px; text-align: center;">
+                            <div style="font-size: 1.2em; font-weight: bold; color: #333;">${qr.id}</div>
+                            <div style="font-size: 1em; color: #666;">${qr.name}</div>
+                        </div>
+                    </div>
+                `;
+                
+                counter.textContent = `${currentTestIndex + 1} / ${qrCodes.length}`;
+            }
+        }
+
+        // 前のQRコード
+        function prevTestQR() {
+            if (currentTestIndex > 0) {
+                currentTestIndex--;
+                displayTestQR();
+            }
+        }
+
+        // 次のQRコード
+        function nextTestQR() {
+            if (currentTestIndex < qrCodes.length - 1) {
+                currentTestIndex++;
+                displayTestQR();
+            }
+        }
+
+        // クリア
+        function clearAll() {
+            if (confirm('全てのQRコードをクリアしますか？')) {
+                qrCodes = [];
+                updatePreview();
+                updateStats();
+                document.getElementById('testSection').style.display = 'none';
+                document.getElementById('printControls').style.display = 'none';
+                document.getElementById('printPreviewSection').style.display = 'none';
+                showNotification('クリアしました', 'warning');
+            }
+        }
+
+        // イベントリスナー設定
+        document.addEventListener('DOMContentLoaded', function() {
+            // リアルタイム統計更新
+            ['startNumber', 'endNumber'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateStats);
+            });
+            
+            // 初期統計表示
+            updateStats();
+        });
+    </script>
+</body>
+</html>
