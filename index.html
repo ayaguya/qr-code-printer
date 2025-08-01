@@ -759,4 +759,118 @@
             const notification = document.getElementById('notification');
             notification.classList.remove('show');
 
-            preparePrintData
+            preparePrintData();
+            
+            // 少し待ってから印刷実行（画像の読み込み待ち + 通知非表示確実化）
+            setTimeout(() => {
+                window.print();
+                // 印刷後に通知を表示
+                setTimeout(() => {
+                    showNotification('印刷を実行しました（余白なし印刷で正確に配置されます）', 'success');
+                }, 1000);
+            }, 200);
+        }
+
+        // PDF保存（印刷→PDF保存を案内）
+        function downloadPDF() {
+            if (qrCodes.length === 0) {
+                showNotification('保存するQRコードがありません', 'error');
+                return;
+            }
+
+            // 通知を非表示にする
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+
+            preparePrintData();
+            
+            setTimeout(() => {
+                window.print();
+                // 印刷後に案内を表示
+                setTimeout(() => {
+                    showNotification('PDF保存: 印刷ダイアログで「PDFに保存」を選択してください', 'warning');
+                }, 1000);
+            }, 200);
+        }
+
+        // スマホ読み取りテスト
+        function testQRCodes() {
+            if (qrCodes.length === 0) {
+                showNotification('テスト用のQRコードがありません', 'error');
+                return;
+            }
+
+            currentTestIndex = 0;
+            document.getElementById('testSection').style.display = 'block';
+            displayTestQR();
+            
+            // テストセクションまでスクロール
+            document.getElementById('testSection').scrollIntoView({ behavior: 'smooth' });
+            
+            showNotification('スマホでQRコードを読み取りテストしてください', 'success');
+        }
+
+        // テスト用QRコード表示
+        function displayTestQR() {
+            const testDisplay = document.getElementById('testQRDisplay');
+            const counter = document.getElementById('testQRCounter');
+            
+            if (currentTestIndex < qrCodes.length) {
+                const qr = qrCodes[currentTestIndex];
+                
+                testDisplay.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <img src="${qr.dataURL}" style="width: 200px; height: 200px; display: block;" alt="Test QR Code">
+                        <div style="margin-top: 15px; text-align: center;">
+                            <div style="font-size: 1.2em; font-weight: bold; color: #333;">${qr.id}</div>
+                            <div style="font-size: 1em; color: #666;">${qr.name}</div>
+                        </div>
+                    </div>
+                `;
+                
+                counter.textContent = `${currentTestIndex + 1} / ${qrCodes.length}`;
+            }
+        }
+
+        // 前のQRコード
+        function prevTestQR() {
+            if (currentTestIndex > 0) {
+                currentTestIndex--;
+                displayTestQR();
+            }
+        }
+
+        // 次のQRコード
+        function nextTestQR() {
+            if (currentTestIndex < qrCodes.length - 1) {
+                currentTestIndex++;
+                displayTestQR();
+            }
+        }
+
+        // クリア
+        function clearAll() {
+            if (confirm('全てのQRコードをクリアしますか？')) {
+                qrCodes = [];
+                updatePreview();
+                updateStats();
+                document.getElementById('testSection').style.display = 'none';
+                document.getElementById('printControls').style.display = 'none';
+                document.getElementById('printPreviewSection').style.display = 'none';
+                showNotification('クリアしました', 'warning');
+            }
+        }
+
+        // イベントリスナー設定
+        document.addEventListener('DOMContentLoaded', function() {
+            // リアルタイム統計更新
+            ['startNumber', 'endNumber'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateStats);
+            });
+            
+            // 初期統計表示
+            updateStats();
+        });
+    </script>
+</body>
+</html>
